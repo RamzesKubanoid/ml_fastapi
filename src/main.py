@@ -17,6 +17,12 @@ from src.utils.model_factory import build_churn_pipeline, \
     resolve_hyperparameters
 from src.utils.model_manipulation import save_churn_model, save_model_metadata
 from src import model_store
+from src.utils.history_recorder import (
+    append_training_record,
+    build_training_record,
+    compute_roc_auc,
+    load_history,
+)
 from src.error_handlers import (
     ErrorResponseChurn,
     register_error_handlers,
@@ -448,12 +454,23 @@ def train_model(
     )
     model_store.update(pipeline, metadata)
 
+    roc_auc = compute_roc_auc(pipeline, X_test, y_test)
+    record = build_training_record(
+        model_type=config.model_type,
+        hyperparameters=resolved_params,
+        accuracy=accuracy,
+        f1=f1,
+        roc_auc=roc_auc,
+    )
+    append_training_record(record)
+
     return {
-        "message":        "Model trained and saved successfully.",
-        "model_type":     config.model_type,
+        "message": "Model trained and saved successfully.",
+        "model_type": config.model_type,
         "hyperparameters": resolved_params,
-        "accuracy":       accuracy,
-        "f1_score":       f1,
+        "accuracy": accuracy,
+        "f1_score": f1,
+        "roc_auc": roc_auc,
     }
 
 
@@ -532,4 +549,49 @@ def model_schema():
             "PredictionRequestChurn validator."
         ),
         "features": numeric_features + categorical_features,
+    }
+
+
+# ── Model metrics ────────────────────────────────────────────────────────────
+
+@app.get("/model/metrics")
+def model_metrics(
+    model_type: str | None = Query(
+        default=None,
+        description="Filter by model type: 'logreg' or 'random_forest'.",
+    ),
+    last_n: int = Query(
+        default=10,
+        ge=1,
+        le=100,
+        description="How many of the most recent records to return.",
+    ),
+):
+    """
+    Returns training history from training_history.json.
+
+    - **model_type** — optional filter; omit to see all model types.
+    - **last_n** — number of most recent runs to return (default 10, max 100).
+
+    Each record contains:
+    - `trained_at`      — UTC timestamp of the training run.
+    - `model_type`      — which classifier was used.
+    - `hyperparameters` — full resolved hyperparameter dict.
+    - `metrics`         — accuracy, f1_score, roc_auc on the test set.
+
+    Use this endpoint to compare runs across different model types and
+    hyperparameter settings.
+    """
+    records = load_history(model_type=model_type, last_n=last_n)
+
+    latest = records[0] if records else None
+
+    return {
+        "total_returned": len(records),
+        "filter": {
+            "model_type": model_type,
+            "last_n":     last_n,
+        },
+        "latest_run": latest,
+        "history":    records,
     }
