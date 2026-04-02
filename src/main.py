@@ -1,4 +1,5 @@
 """ML churn service"""
+from typing import get_type_hints
 import pandas as pd
 from fastapi import Body, FastAPI, HTTPException, Query
 from sklearn.metrics import accuracy_score, f1_score
@@ -7,10 +8,11 @@ from src.schemas import (
     PredictionRequestChurn,
     PredictionResponseChurn,
     TrainingConfigChurn,
+    FeatureVectorChurn
 )
 from src.utils.dataset import load_churn_dataset, dataset_info
 from src.utils.preprocessing import prepare_data, get_split_info, \
-    load_raw_splits
+    load_raw_splits, NUMERIC_FEATURES, CATEGORICAL_FEATURES
 from src.utils.model_factory import build_churn_pipeline, \
     resolve_hyperparameters
 from src.utils.model_manipulation import save_churn_model, save_model_metadata
@@ -260,9 +262,9 @@ def train_model(
     """
     Trains a churn prediction model according to the supplied configuration.
 
-    - `model_type` — `"logreg"` (LogisticRegression) or `"random_forest"` 
+    - `model_type` — `"logreg"` (LogisticRegression) or `"random_forest"`
         (RandomForestClassifier).
-    - `hyperparameters` — optional overrides; any key not supplied falls 
+    - `hyperparameters` — optional overrides; any key not supplied falls
         back to the model default.
 
     After training the model and its metadata are saved to disk so they survive
@@ -333,4 +335,57 @@ def model_status():
         "model_type":      meta.get("model_type"),
         "hyperparameters": meta.get("hyperparameters"),
         "metrics":         meta.get("metrics"),
+    }
+
+
+# ── Model schema ─────────────────────────────────────────────────────────────
+
+@app.get("/model/schema")
+def model_schema():
+    """
+    Returns the list of features the model expects, their value types, and
+    which group each belongs to (numeric vs categorical).
+
+    Clients can use this response to validate and construct prediction requests
+    correctly before calling POST /predict.
+
+    Response structure:
+    - `features`       — ordered list of feature descriptors.
+    - `input_model`    — name of the Pydantic schema that /predict accepts.
+    - `note`           — reminder that feature names
+        and types must match exactly.
+    """
+
+    hints: dict[str, type] = get_type_hints(FeatureVectorChurn)
+    type_names = {int: "int", float: "float", str: "str"}
+
+    numeric_features = [
+        {
+            "name":        name,
+            "type":        type_names.get(hints[name], str(hints[name])),
+            "group":       "numeric",
+            "description": "Scaled with StandardScaler during training.",
+        }
+        for name in NUMERIC_FEATURES
+    ]
+
+    categorical_features = [
+        {
+            "name":        name,
+            "type":        type_names.get(hints[name], str(hints[name])),
+            "group":       "categorical",
+            "description": "One-hot encoded during training.",
+        }
+        for name in CATEGORICAL_FEATURES
+    ]
+
+    return {
+        "input_model": "PredictionRequestChurn",
+        "note": (
+            "Feature names and types must exactly match this schema. "
+            "Unknown categorical values are handled gracefully (OHE encodes "
+            "them as all-zeros); unknown field names are rejected by the "
+            "PredictionRequestChurn validator."
+        ),
+        "features": numeric_features + categorical_features,
     }
