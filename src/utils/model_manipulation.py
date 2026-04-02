@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import joblib
 from sklearn.pipeline import Pipeline
@@ -61,23 +62,29 @@ def load_churn_model(
 def save_model_metadata(
     accuracy: float,
     f1: float,
+    model_type: str,
+    hyperparameters: dict[str, Any],
     path: Path = DEFAULT_METADATA_PATH,
 ) -> dict:
     """
-    Saves model training metadata (timestamp + metrics) as a JSON file
-    alongside the model artifact.
+    Saves model training metadata (timestamp, metrics, model type and
+    hyperparameters) as a JSON file alongside the model artifact.
 
     Args:
-        accuracy: Accuracy on the test set.
-        f1:       F1 score on the test set.
-        path:     Destination JSON path 
-            (default: models/churn_model_metadata.json).
+        accuracy:        Accuracy on the test set.
+        f1:              F1 score on the test set.
+        model_type:      String identifier of the trained model.
+        hyperparameters: Full hyperparameter dict used during training
+                         (defaults already merged in).
+        path:            Destination JSON path.
 
     Returns:
         The metadata dict that was written to disk.
     """
     metadata = {
         "trained_at": datetime.now(timezone.utc).isoformat(),
+        "model_type": model_type,
+        "hyperparameters": hyperparameters,
         "metrics": {
             "accuracy": accuracy,
             "f1_score": f1,

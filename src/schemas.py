@@ -1,4 +1,6 @@
 """ML churn service models"""
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -88,3 +90,53 @@ class PredictionResponseChurn(BaseModel):
         description="Model confidence that the client will stay (class 0).",
         examples=[0.17],
     )
+
+
+# ── Training config ──────────────────────────────────────────────────────────
+
+class TrainingConfigChurn(BaseModel):
+    """
+    Controls which model is trained and with what hyperparameters.
+
+    Supported model types and their key hyperparameters:
+
+    **logreg** (LogisticRegression):
+    - `C` (float, default 1.0) — inverse regularisation strength;
+        smaller = stronger regularisation
+    - `max_iter` (int, default 1000) — maximum solver iterations
+    - `class_weight` (str, default "balanced") — handles class imbalance
+
+    **random_forest** (RandomForestClassifier):
+    - `n_estimators` (int, default 100) — number of trees
+    - `max_depth` (int | null, default null) — maximum tree depth;
+        null = unlimited
+    - `class_weight` (str, default "balanced") — handles class imbalance
+    - `random_state` (int, default 42) — reproducibility seed
+    """
+    model_type: Literal["logreg", "random_forest"] = Field(
+        default="logreg",
+        description="Which classifier to train: 'logreg' or 'random_forest'.",
+    )
+    hyperparameters: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Hyperparameter overrides for the selected model. "
+            "Any key not provided falls back to the model's default value. "
+            "Unknown keys are rejected by the classifier at fit time."
+        ),
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "model_type": "logreg",
+                    "hyperparameters": {"C": 0.5, "max_iter": 500},
+                },
+                {
+                    "model_type": "random_forest",
+                    "hyperparameters": {"n_estimators": 200, "max_depth": 10},
+                },
+            ]
+        }
+    }

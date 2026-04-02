@@ -6,11 +6,13 @@ from sklearn.metrics import accuracy_score, f1_score
 from src.schemas import (
     PredictionRequestChurn,
     PredictionResponseChurn,
+    TrainingConfigChurn,
 )
 from src.utils.dataset import load_churn_dataset, dataset_info
 from src.utils.preprocessing import prepare_data, get_split_info, \
     load_raw_splits
-from src.utils.logreg import train_churn_model
+from src.utils.model_factory import build_churn_pipeline, \
+    resolve_hyperparameters
 from src.utils.model_manipulation import save_churn_model, save_model_metadata
 from src import model_store
 
@@ -23,14 +25,11 @@ def health_check():
     """
     Server health check
     """
-    return {
-        "message": "ml churn service is running"
-    }
+    return {"message": "ml churn service is running"}
 
 
 # ── Prediction ───────────────────────────────────────────────────────────────
 
-# OpenAPI examples shown in /docs under "Try it out"
 _PREDICT_EXAMPLES = {
     "single_likely_churn": {
         "summary": "Single client — likely to churn",
@@ -182,7 +181,6 @@ def predict(
 
 # ── Dataset ──────────────────────────────────────────────────────────────────
 
-
 @app.get("/dataset/preview")
 def preview_dataset(
     n: int = Query(default=10, ge=1, description="Number of rows to return"),
@@ -205,8 +203,7 @@ def get_dataset_info():
     """
     Returns info about dataset
     """
-    result = dataset_info()
-    return result
+    return dataset_info()
 
 
 @app.get("/dataset/split-info")
@@ -224,33 +221,93 @@ def split_info():
 
 # ── Model ────────────────────────────────────────────────────────────────────
 
+_TRAIN_EXAMPLES = {
+    "logreg_defaults": {
+        "summary": "Logistic Regression — default hyperparameters",
+        "value": {
+            "model_type": "logreg",
+            "hyperparameters": {},
+        },
+    },
+    "logreg_custom": {
+        "summary": "Logistic Regression — stronger regularisation",
+        "value": {
+            "model_type": "logreg",
+            "hyperparameters": {"C": 0.1, "max_iter": 500},
+        },
+    },
+    "random_forest_defaults": {
+        "summary": "Random Forest — default hyperparameters",
+        "value": {
+            "model_type": "random_forest",
+            "hyperparameters": {},
+        },
+    },
+    "random_forest_custom": {
+        "summary": "Random Forest — deeper trees, more estimators",
+        "value": {
+            "model_type": "random_forest",
+            "hyperparameters": {"n_estimators": 200, "max_depth": 10},
+        },
+    },
+}
+
 
 @app.post("/model/train")
-def train_model():
+def train_model(
+    config: TrainingConfigChurn = Body(openapi_examples=_TRAIN_EXAMPLES),
+):
     """
-    Trains a LogisticRegression model on churn_dataset.csv and returns
-    accuracy and F1 metrics evaluated on the held-out test set.
+    Trains a churn prediction model according to the supplied configuration.
+
+    - `model_type` — `"logreg"` (LogisticRegression) or `"random_forest"` 
+        (RandomForestClassifier).
+    - `hyperparameters` — optional overrides; any key not supplied falls 
+        back to the model default.
+
+    After training the model and its metadata are saved to disk so they survive
+    a service restart. The in-memory store is updated immediately so
+    `/predict` and `/model/status` reflect the new model without a restart.
     """
     try:
         X_train, X_test, y_train, y_test = load_raw_splits()
     except (FileNotFoundError, ValueError) as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 
-    model = train_churn_model(X_train, y_train)
-    y_pred = model.predict(X_test)
+    # Merge caller overrides with per-model defaults
+    resolved_params = resolve_hyperparameters(
+        config.model_type, config.hyperparameters
+    )
 
+    try:
+        pipeline = build_churn_pipeline(config.model_type, resolved_params)
+        pipeline.fit(X_train, y_train)
+    except (TypeError, ValueError) as e:
+        # Catches unknown or incompatible hyperparameter keys
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid hyperparameters for '{config.model_type}': {e}",
+        ) from e
+
+    y_pred = pipeline.predict(X_test)
     accuracy = round(accuracy_score(y_test, y_pred), 4)
     f1 = round(f1_score(y_test, y_pred), 4)
 
-    save_churn_model(model)
-    metadata = save_model_metadata(accuracy, f1)
-
-    model_store.update(model, metadata)
+    save_churn_model(pipeline)
+    metadata = save_model_metadata(
+        accuracy=accuracy,
+        f1=f1,
+        model_type=config.model_type,
+        hyperparameters=resolved_params,
+    )
+    model_store.update(pipeline, metadata)
 
     return {
-        "message":  "Model trained and saved successfully.",
-        "accuracy": accuracy,
-        "f1_score": f1,
+        "message":        "Model trained and saved successfully.",
+        "model_type":     config.model_type,
+        "hyperparameters": resolved_params,
+        "accuracy":       accuracy,
+        "f1_score":       f1,
     }
 
 
@@ -258,18 +315,22 @@ def train_model():
 def model_status():
     """
     Returns whether a trained model is available, when it was last trained,
-    and the metrics it achieved on the test set.
+    which model type was used, its hyperparameters, and the test-set metrics.
     """
     if model_store.model is None:
         return {
-            "trained":    False,
-            "trained_at": None,
-            "metrics":    None,
+            "trained":         False,
+            "trained_at":      None,
+            "model_type":      None,
+            "hyperparameters": None,
+            "metrics":         None,
         }
 
     meta = model_store.metadata or {}
     return {
-        "trained":    True,
-        "trained_at": meta.get("trained_at"),
-        "metrics":    meta.get("metrics"),
+        "trained":         True,
+        "trained_at":      meta.get("trained_at"),
+        "model_type":      meta.get("model_type"),
+        "hyperparameters": meta.get("hyperparameters"),
+        "metrics":         meta.get("metrics"),
     }
