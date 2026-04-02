@@ -17,9 +17,14 @@ from src.utils.model_factory import build_churn_pipeline, \
     resolve_hyperparameters
 from src.utils.model_manipulation import save_churn_model, save_model_metadata
 from src import model_store
+from src.error_handlers import (
+    ErrorResponseChurn,
+    register_error_handlers,
+)
 
 
 app = FastAPI()
+register_error_handlers(app)
 
 
 @app.get("/health")
@@ -140,8 +145,98 @@ _PREDICT_EXAMPLES = {
                 }
             },
         },
-        409: {"description": "Model has not been trained yet."},
-        422: {"description": "Invalid input data."},
+        409: {
+            "description": "Model has not been trained yet.",
+            "model": ErrorResponseChurn,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "code":    "model_not_ready",
+                        "message": (
+                            "No trained model is available. "
+                            "Please call POST /model/train first."
+                        ),
+                        "details": None,
+                    }
+                }
+            },
+        },
+        422: {
+            "description": (
+                "Validation error — wrong types, missing or "
+                "extra fields."
+            ),
+            "model": ErrorResponseChurn,
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "missing_field": {
+                            "summary": "Required field missing",
+                            "value": {
+                                "code":    "validation_error",
+                                "message": (
+                                    "1 validation error(s) in "
+                                    "the request body."
+                                ),
+                                "details": [
+                                    {
+                                        "field": (
+                                            "body → clients → 0 → "
+                                            "monthly_fee"
+                                        ),
+                                        "issue": "missing",
+                                        "message": "Field required",
+                                    }
+                                ],
+                            },
+                        },
+                        "wrong_type": {
+                            "summary": "Wrong value type",
+                            "value": {
+                                "code":    "validation_error",
+                                "message": (
+                                    "1 validation error(s) in "
+                                    "the request body."
+                                ),
+                                "details": [
+                                    {
+                                        "field": (
+                                            "body → clients → 0 → "
+                                            "support_requests"
+                                        ),
+                                        "issue": "int_parsing_error",
+                                        "message": (
+                                            "Input should be a "
+                                            "valid integer"
+                                        ),
+                                    }
+                                ],
+                            },
+                        },
+                        "empty_clients": {
+                            "summary": "Empty clients list",
+                            "value": {
+                                "code":    "validation_error",
+                                "message": (
+                                    "1 validation error(s) in "
+                                    "the request body."
+                                ),
+                                "details": [
+                                    {
+                                        "field": "body → clients",
+                                        "issue": "too_short",
+                                        "message": (
+                                            "List should have at "
+                                            "least 1 item"
+                                        ),
+                                    }
+                                ],
+                            },
+                        },
+                    }
+                }
+            },
+        },
     },
 )
 def predict(
@@ -255,7 +350,56 @@ _TRAIN_EXAMPLES = {
 }
 
 
-@app.post("/model/train")
+@app.post(
+    "/model/train",
+    responses={
+        422: {
+            "description": "Dataset problem or invalid hyperparameters.",
+            "model": ErrorResponseChurn,
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "empty_dataset": {
+                            "summary": "Dataset is empty",
+                            "value": {
+                                "code":    "data_error",
+                                "message": (
+                                    "Dataset is empty after dropping "
+                                    "rows with missing target."
+                                ),
+                                "details": None,
+                            },
+                        },
+                        "dataset_not_found": {
+                            "summary": "Dataset file not found",
+                            "value": {
+                                "code":    "not_found",
+                                "message": (
+                                    "Dataset file not found: "
+                                    "data/churn_dataset.csv"
+                                ),
+                                "details": None,
+                            },
+                        },
+                        "bad_hyperparameters": {
+                            "summary": "Invalid hyperparameter",
+                            "value": {
+                                "code":    "unprocessable_entity",
+                                "message": (
+                                    "Invalid hyperparameters for "
+                                    "'logreg': __init__() got an "
+                                    "unexpected keyword argument "
+                                    "'unknown_param'"
+                                ),
+                                "details": None,
+                            },
+                        },
+                    }
+                }
+            },
+        },
+    },
+)
 def train_model(
     config: TrainingConfigChurn = Body(openapi_examples=_TRAIN_EXAMPLES),
 ):
