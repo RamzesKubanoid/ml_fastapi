@@ -1,21 +1,18 @@
 """
-model_factory.py — builds sklearn classifiers and full pipelines by name.
+builds churn pipelines by model type.
 
-Keeps model construction separate from training logic, making it easy to
-add new model types in one place without touching any other file.
+Delegates pipeline construction to transformer_universal.py (ColumnTransformer
+approach) and owns the per-model default hyperparameter registry.
 """
 from typing import Any
 
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import Pipeline
-
-from src.utils.logreg import ChurnPreprocessor
+from src.utils.transformer_universal import build_universal_pipeline
 
 
 # ── Per-model default hyperparameters ────────────────────────────────────────
-# Defined here so they are stored in metadata even when the caller passes an
-# empty hyperparameters dict, making /model/status always informative.
+# Stored here so that resolve_hyperparameters() always returns a complete dict.
+# /model/status therefore always shows the full effective configuration even
+# when the caller passed an empty hyperparameters dict.
 
 _DEFAULTS: dict[str, dict[str, Any]] = {
     "logreg": {
@@ -54,60 +51,25 @@ def resolve_hyperparameters(
     return {**_DEFAULTS[model_type], **overrides}
 
 
-def build_classifier(
+def build_churn_pipeline(
     model_type: str,
     hyperparameters: dict[str, Any],
 ):
     """
-    Instantiates an unfitted sklearn classifier from a type string and a
-    fully-resolved hyperparameter dict.
+    Constructs a full sklearn Pipeline using ColumnTransformer-based
+    preprocessing (StandardScaler + OneHotEncoder) followed by the chosen
+    classifier.
+
+    The entire pipeline is a single sklearn object — preprocessor and model
+    are saved and loaded atomically by joblib, eliminating any risk of a
+    model being paired with a mismatched transformer after a restart.
 
     Args:
         model_type:      "logreg" or "random_forest".
-        hyperparameters: Complete hyperparameter dict
-                         (use resolve_hyperparameters
-                         to merge defaults with caller overrides first).
-
-    Returns:
-        Unfitted sklearn classifier instance.
-
-    Raises:
-        ValueError: If model_type is not a supported type string.
-    """
-    if model_type == "logreg":
-        return LogisticRegression(**hyperparameters)
-
-    if model_type == "random_forest":
-        return RandomForestClassifier(**hyperparameters)
-
-    supported = list(_DEFAULTS.keys())
-    raise ValueError(
-        f"Unsupported model_type '{model_type}'. Supported: {supported}"
-    )
-
-
-def build_churn_pipeline(
-    model_type: str,
-    hyperparameters: dict[str, Any],
-) -> Pipeline:
-    """
-    Composes a full sklearn Pipeline:
-        ChurnPreprocessor (from logreg.py) → classifier.
-
-    Reuses the existing ChurnPreprocessor so all preprocessing logic stays in
-    one place and the pipeline is compatible with the rest of the codebase.
-
-    Args:
-        model_type:      "logreg" or "random_forest".
-        hyperparameters: Fully-resolved hyperparameters (defaults + overrides).
+        hyperparameters: Fully-resolved dict (defaults already merged in via
+                         resolve_hyperparameters).
 
     Returns:
         Unfitted sklearn Pipeline.
     """
-    classifier = build_classifier(model_type, hyperparameters)
-    return Pipeline(
-        steps=[
-            ("preprocessor", ChurnPreprocessor()),
-            ("classifier", classifier),
-        ]
-    )
+    return build_universal_pipeline(model_type, hyperparameters)

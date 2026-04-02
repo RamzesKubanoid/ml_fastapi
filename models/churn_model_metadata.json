@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-04-02T07:07:48.854250+00:00",
+  "trained_at": "2026-04-02T09:15:58.861086+00:00",
   "model_type": "logreg",
   "hyperparameters": {
     "C": 1.0,
