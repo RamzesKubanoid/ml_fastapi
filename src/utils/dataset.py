@@ -2,6 +2,9 @@
 from pathlib import Path
 import pandas as pd
 from src.schemas import DataSetRowChurn
+from src.utils.log_control import get_logger
+
+log = get_logger(__name__)
 
 
 DEFAULT_DATASET_PATH = Path(
@@ -32,6 +35,8 @@ def load_churn_dataset(csv_path: Path = DEFAULT_DATASET_PATH) -> pd.DataFrame:
 
     if raw_df.empty:
         raise ValueError("Dataset file is empty.")
+
+    log.info("Dataset loaded: %d rows from %s", len(raw_df), csv_path)
 
     validated_rows: list[DataSetRowChurn] = [
         DataSetRowChurn(**row)

@@ -27,7 +27,10 @@ from src.error_handlers import (
     ErrorResponseChurn,
     register_error_handlers,
 )
+from src.utils.log_control import get_logger
 
+
+log = get_logger(__name__)
 
 app = FastAPI()
 register_error_handlers(app)
@@ -36,9 +39,37 @@ register_error_handlers(app)
 @app.get("/health")
 def health_check():
     """
-    Server health check
+    Returns service liveness plus readiness signals:
+    - **model_ready**   — whether a trained model is in memory.
+    - **dataset_ready** — whether the dataset file is accessible.
     """
-    return {"message": "ml churn service is running"}
+    # ── Dataset probe ─────────────────────────────────────────
+    dataset_ready = False
+    dataset_detail = None
+    try:
+        load_churn_dataset()
+        dataset_ready = True
+    except (FileNotFoundError, ValueError) as exc:
+        dataset_detail = str(exc)
+        log.warning("Health: dataset not accessible: %s", exc)
+
+    # ── Model probe ───────────────────────────────────────────
+    model_ready = model_store.model is not None
+    model_type = None
+    if model_ready and model_store.metadata:
+        model_type = model_store.metadata.get("model_type")
+
+    status = "ok" if (dataset_ready and model_ready) else "degraded"
+    log.info("Health check: status=%s model=%s dataset=%s",
+             status, model_ready, dataset_ready)
+
+    return {
+        "status":         status,
+        "model_ready":    model_ready,
+        "model_type":     model_type,
+        "dataset_ready":  dataset_ready,
+        "dataset_detail": dataset_detail,
+    }
 
 
 # ── Prediction ───────────────────────────────────────────────────────────────
@@ -267,12 +298,15 @@ def predict(
             ),
         )
 
+    n_clients = len(request.clients)
+    log.info("Prediction request: %d client(s)", n_clients)
+
     X = pd.DataFrame([client.model_dump() for client in request.clients])
 
     classes = model_store.model.predict(X)
     probabilities = model_store.model.predict_proba(X)   # shape (n, 2)
 
-    return [
+    results = [
         PredictionResponseChurn(
             churn_class=int(cls),
             probability_churn=round(float(proba[1]), 4),
@@ -280,6 +314,10 @@ def predict(
         )
         for cls, proba in zip(classes, probabilities)
     ]
+    churn_count = sum(r.churn_class for r in results)
+    log.info("Prediction done: %d/%d predicted to churn",
+             churn_count, n_clients)
+    return results
 
 
 # ── Dataset ──────────────────────────────────────────────────────────────────
@@ -421,9 +459,12 @@ def train_model(
     a service restart. The in-memory store is updated immediately so
     `/predict` and `/model/status` reflect the new model without a restart.
     """
+    log.info("Training started: model_type=%s hyperparameters=%s",
+             config.model_type, config.hyperparameters)
     try:
         X_train, X_test, y_train, y_test = load_raw_splits()
     except (FileNotFoundError, ValueError) as e:
+        log.error("Training failed — dataset error: %s", e)
         raise HTTPException(status_code=422, detail=str(e)) from e
 
     # Merge caller overrides with per-model defaults
@@ -436,6 +477,8 @@ def train_model(
         pipeline.fit(X_train, y_train)
     except (TypeError, ValueError) as e:
         # Catches unknown or incompatible hyperparameter keys
+        log.error("Training failed — bad hyperparameters for %s: %s",
+                  config.model_type, e)
         raise HTTPException(
             status_code=422,
             detail=f"Invalid hyperparameters for '{config.model_type}': {e}",
@@ -464,6 +507,10 @@ def train_model(
     )
     append_training_record(record)
 
+    log.info(
+        "Training complete: model=%s accuracy=%.4f f1=%.4f roc_auc=%.4f",
+        config.model_type, accuracy, f1, roc_auc,
+    )
     return {
         "message": "Model trained and saved successfully.",
         "model_type": config.model_type,
