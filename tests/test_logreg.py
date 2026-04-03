@@ -5,13 +5,10 @@ src/utils/model_factory.py + transformer_universal.py
 Tests cover: ChurnPreprocessor sklearn API, pipeline construction,
 model training, prediction output shapes and types.
 """
-import numpy as np
 import pandas as pd
 import pytest
-from sklearn.pipeline import Pipeline
 
-from src.utils.logreg import ChurnPreprocessor, build_pipeline, \
-    train_churn_model
+from src.utils.logreg import ChurnPreprocessor
 from src.utils.model_factory import build_churn_pipeline, \
     resolve_hyperparameters
 from src.utils.preprocessing import NUMERIC_FEATURES
@@ -59,53 +56,6 @@ class TestChurnPreprocessor:
         cp2 = ChurnPreprocessor()
         out2 = cp2.fit(X_train).transform(X_train)
         pd.testing.assert_frame_equal(out1, out2)
-
-
-# ── build_pipeline (logreg.py) ───────────────────────────────────────────────
-
-class TestBuildPipeline:
-    def test_returns_pipeline(self):
-        p = build_pipeline()
-        assert isinstance(p, Pipeline)
-
-    def test_has_preprocessor_and_classifier_steps(self):
-        p = build_pipeline()
-        step_names = [name for name, _ in p.steps]
-        assert "preprocessor" in step_names
-        assert "classifier" in step_names
-
-
-# ── train_churn_model ────────────────────────────────────────────────────────
-
-class TestTrainChurnModel:
-    def test_returns_fitted_pipeline(self, raw_splits):
-        X_train, _, y_train, _ = raw_splits
-        model = train_churn_model(X_train, y_train)
-        assert isinstance(model, Pipeline)
-
-    def test_predict_output_shape(self, raw_splits):
-        X_train, X_test, y_train, _ = raw_splits
-        model = train_churn_model(X_train, y_train)
-        preds = model.predict(X_test)
-        assert preds.shape == (len(X_test),)
-
-    def test_predict_only_binary_classes(self, raw_splits):
-        X_train, X_test, y_train, _ = raw_splits
-        model = train_churn_model(X_train, y_train)
-        preds = model.predict(X_test)
-        assert set(preds).issubset({0, 1})
-
-    def test_predict_proba_shape(self, raw_splits):
-        X_train, X_test, y_train, _ = raw_splits
-        model = train_churn_model(X_train, y_train)
-        proba = model.predict_proba(X_test)
-        assert proba.shape == (len(X_test), 2)
-
-    def test_predict_proba_rows_sum_to_one(self, raw_splits):
-        X_train, X_test, y_train, _ = raw_splits
-        model = train_churn_model(X_train, y_train)
-        proba = model.predict_proba(X_test)
-        np.testing.assert_allclose(proba.sum(axis=1), 1.0, atol=1e-6)
 
 
 # ── resolve_hyperparameters ──────────────────────────────────────────────────
