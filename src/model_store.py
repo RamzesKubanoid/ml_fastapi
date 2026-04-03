@@ -15,6 +15,9 @@ from src.utils.model_manipulation import (
     load_churn_model,
     load_model_metadata,
 )
+from src.utils.log_control import get_logger
+
+log = get_logger(__name__)
 
 # ── State ────────────────────────────────────────────────────────────────────
 
@@ -26,9 +29,9 @@ metadata: dict | None = None
 try:
     model = load_churn_model()
     metadata = load_model_metadata()
-    print("[model_store] Pre-trained model loaded successfully.")
+    log.info("Pre-trained model loaded from disk.")
 except FileNotFoundError:
-    print("[model_store] No saved model found — train via POST /model/train.")
+    log.warning("No saved model found — service starts untrained.")
 
 
 # ── Mutators ─────────────────────────────────────────────────────────────────

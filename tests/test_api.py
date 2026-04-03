@@ -23,28 +23,34 @@ class TestHealth:
     def test_body_contains_message(self, client):
         """testing service availability"""
         body = client.get("/health").json()
-        assert "message" in body
+        assert "model_ready" in body
 
 
 # ── /dataset/preview ─────────────────────────────────────────────────────────
 
 class TestDatasetPreview:
+    """testing /dataset/preview"""
     def test_returns_200(self, client):
+        """testing /dataset/preview health"""
         assert client.get("/dataset/preview").status_code == 200
 
     def test_default_returns_ten_rows(self, client):
+        """testing /dataset/preview return 10 rows"""
         rows = client.get("/dataset/preview").json()
         assert len(rows) == 10
 
     def test_n_param_limits_rows(self, client):
+        """testing /dataset/preview return n rows"""
         rows = client.get("/dataset/preview?n=3").json()
         assert len(rows) == 3
 
     def test_n_zero_returns_422(self, client):
+        """testing /dataset/preview return 422 on 0 row"""
         r = client.get("/dataset/preview?n=0")
         assert r.status_code == 422
 
     def test_rows_contain_expected_keys(self, client):
+        """testing row contains expected key"""
         rows = client.get("/dataset/preview?n=1").json()
         assert "monthly_fee" in rows[0]
         assert "churn" in rows[0]
@@ -53,10 +59,13 @@ class TestDatasetPreview:
 # ── /dataset/info ────────────────────────────────────────────────────────────
 
 class TestDatasetInfo:
+    """testing /dataset/info"""
     def test_returns_200(self, client):
+        """testing /dataset/info health"""
         assert client.get("/dataset/info").status_code == 200
 
     def test_body_shape(self, client):
+        """testing /dataset/preview"""
         body = client.get("/dataset/info").json()
         assert {"num_rows", "num_columns", "feature_names",
                 "churn_distribution"} <= set(body.keys())
@@ -65,10 +74,13 @@ class TestDatasetInfo:
 # ── /dataset/split-info ──────────────────────────────────────────────────────
 
 class TestDatasetSplitInfo:
+    """testing /dataset/split-info"""
     def test_returns_200(self, client):
+        """testing /dataset/split-info health"""
         assert client.get("/dataset/split-info").status_code == 200
 
     def test_contains_train_and_test_sizes(self, client):
+        """testing /dataset/preview"""
         body = client.get("/dataset/split-info").json()
         assert "train_size" in body
         assert "test_size" in body
@@ -77,7 +89,9 @@ class TestDatasetSplitInfo:
 # ── /model/status (untrained) ────────────────────────────────────────────────
 
 class TestModelStatusUntrained:
+    """testing /dataset/status"""
     def test_returns_200(self, client):
+        """testing /dataset/status health"""
         assert client.get("/model/status").status_code == 200
 
     def test_trained_is_false(self, client):

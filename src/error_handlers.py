@@ -9,6 +9,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from src.utils.log_control import get_logger
+
+log = get_logger(__name__)
 
 
 # ── Common error schema ──────────────────────────────────────────────────────
@@ -57,6 +60,7 @@ async def _handle_http_exception(
         500: "internal_server_error",
     }
     code = code_map.get(exc.status_code, f"http_{exc.status_code}")
+    log.warning("HTTP %d [%s]: %s", exc.status_code, code, exc.detail)
     return _json(exc.status_code, code, str(exc.detail))
 
 
@@ -111,8 +115,8 @@ async def _handle_unhandled_exception(
     is intentionally withheld from the client to avoid leaking internals.
     The full exception is printed server-side for debugging.
     """
-    print(f"[error] Unhandled exception on {request.method} {request.url}: "
-          f"{type(exc).__name__}: {exc}")
+    log.error("Unhandled %s on %s %s: %s",
+              type(exc).__name__, request.method, request.url, exc)
     return _json(
         500,
         "internal_server_error",
