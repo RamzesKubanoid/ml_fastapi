@@ -28,5 +28,65 @@
       "f1_score": 0.2017,
       "roc_auc": 0.5958
     }
+  },
+  {
+    "trained_at": "2026-04-03T17:01:41.678441+00:00",
+    "model_type": "logreg",
+    "hyperparameters": {
+      "C": 1.0,
+      "max_iter": 1000,
+      "random_state": 42,
+      "class_weight": "balanced"
+    },
+    "metrics": {
+      "accuracy": 0.5875,
+      "f1_score": 0.3478,
+      "roc_auc": 0.6112
+    }
+  },
+  {
+    "trained_at": "2026-04-03T17:01:44.078178+00:00",
+    "model_type": "logreg",
+    "hyperparameters": {
+      "C": 1.0,
+      "max_iter": 1000,
+      "random_state": 42,
+      "class_weight": "balanced"
+    },
+    "metrics": {
+      "accuracy": 0.5875,
+      "f1_score": 0.3478,
+      "roc_auc": 0.6112
+    }
+  },
+  {
+    "trained_at": "2026-04-03T17:01:59.741470+00:00",
+    "model_type": "random_forest",
+    "hyperparameters": {
+      "n_estimators": 100,
+      "max_depth": null,
+      "random_state": 42,
+      "class_weight": "balanced"
+    },
+    "metrics": {
+      "accuracy": 0.7875,
+      "f1_score": 0.1237,
+      "roc_auc": 0.5809
+    }
+  },
+  {
+    "trained_at": "2026-04-03T17:02:31.595869+00:00",
+    "model_type": "logreg",
+    "hyperparameters": {
+      "C": 1.0,
+      "max_iter": 1000,
+      "random_state": 42,
+      "class_weight": "balanced"
+    },
+    "metrics": {
+      "accuracy": 0.5875,
+      "f1_score": 0.3478,
+      "roc_auc": 0.6112
+    }
   }
 ]

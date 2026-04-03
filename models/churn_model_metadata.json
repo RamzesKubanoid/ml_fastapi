@@ -1,14 +1,14 @@
 {
-  "trained_at": "2026-04-02T14:56:49.266435+00:00",
-  "model_type": "random_forest",
+  "trained_at": "2026-04-03T17:02:31.593891+00:00",
+  "model_type": "logreg",
   "hyperparameters": {
-    "n_estimators": 200,
-    "max_depth": 10,
+    "C": 1.0,
+    "max_iter": 1000,
     "random_state": 42,
     "class_weight": "balanced"
   },
   "metrics": {
-    "accuracy": 0.7625,
-    "f1_score": 0.2017
+    "accuracy": 0.5875,
+    "f1_score": 0.3478
   }
 }
