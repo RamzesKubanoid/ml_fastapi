@@ -5,6 +5,7 @@ Tests cover: record construction, append/load round-trip, filtering,
 ordering, thread-safety basics, roc_auc computation.
 """
 import json
+from datetime import datetime
 
 from src.utils.history_recorder import (
     _load_raw,
@@ -37,7 +38,6 @@ class TestBuildTrainingRecord:
 
     def test_trained_at_is_iso_string(self):
         r = build_training_record("logreg", {}, 0.80, 0.55, 0.88)
-        from datetime import datetime
         # Should not raise
         datetime.fromisoformat(r["trained_at"])
 
