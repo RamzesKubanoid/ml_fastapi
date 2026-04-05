@@ -1,11 +1,11 @@
 """
-test_dataset.py — unit tests for src/utils/dataset.py
+test_dataset.py — unit tests for src/ml/dataset.py
 
 Tests cover: happy path loading, empty file, missing file, schema validation.
 """
 import pytest
 import pandas as pd
-from src.utils.dataset import load_churn_dataset, dataset_info
+from src.ml.dataset import load_churn_dataset, dataset_info
 from tests.conftest import SYNTHETIC_ROWS
 
 

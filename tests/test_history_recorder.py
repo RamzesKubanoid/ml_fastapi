@@ -1,5 +1,5 @@
 """
-test_history_recorder.py — unit tests for src/utils/history_recorder.py
+test_history_recorder.py — unit tests for src/core/history_recorder.py
 
 Tests cover: record construction, append/load round-trip, filtering,
 ordering, thread-safety basics, roc_auc computation.
@@ -7,7 +7,7 @@ ordering, thread-safety basics, roc_auc computation.
 import json
 from datetime import datetime
 
-from src.utils.history_recorder import (
+from src.core.history_recorder import (
     _load_raw,
     append_training_record,
     build_training_record,

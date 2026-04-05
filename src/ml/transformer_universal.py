@@ -14,7 +14,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from src.utils.preprocessing import CATEGORICAL_FEATURES, NUMERIC_FEATURES
+from src.ml.preprocessing import CATEGORICAL_FEATURES, NUMERIC_FEATURES
 
 
 # ── Preprocessor ─────────────────────────────────────────────────────────────

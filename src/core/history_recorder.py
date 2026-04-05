@@ -9,7 +9,7 @@ Design decisions:
   - Append-only: records are never mutated or deleted, preserving a full audit
     trail of every training run.
   - File-per-service: one flat JSON array is sufficient for a single-instance
-    service. For multi-instance deployments, replace with a DB-backed store.
+    service.
   - All I/O goes through a file lock to prevent corruption if two training
     requests run concurrently.
 """

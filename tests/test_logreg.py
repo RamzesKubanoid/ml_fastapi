@@ -1,6 +1,6 @@
 """
 test_logreg.py — unit tests for src/utils/logreg.py and
-src/utils/model_factory.py + transformer_universal.py
+src/ml/model_factory.py + transformer_universal.py
 
 Tests cover: ChurnPreprocessor sklearn API, pipeline construction,
 model training, prediction output shapes and types.
@@ -8,10 +8,10 @@ model training, prediction output shapes and types.
 import pandas as pd
 import pytest
 
-from src.utils.logreg import ChurnPreprocessor
-from src.utils.model_factory import build_churn_pipeline, \
+from src.ml.logreg import ChurnPreprocessor
+from src.ml.model_factory import build_churn_pipeline, \
     resolve_hyperparameters
-from src.utils.preprocessing import NUMERIC_FEATURES
+from src.ml.preprocessing import NUMERIC_FEATURES
 
 
 # ── ChurnPreprocessor ────────────────────────────────────────────────────────
@@ -101,9 +101,6 @@ class TestBuildChurnPipeline:
             build_churn_pipeline("xgboost", {})
 
     def test_bad_hyperparameter_raises(self, raw_splits):
-        # LogisticRegression(**params) is called inside build_churn_pipeline
-        # (in _build_classifier), so TypeError is raised at construction time,
-        # not at .fit() time.
         X_train, _, y_train, _ = raw_splits
         params = resolve_hyperparameters("logreg", {"unknown_param": 999})
         with pytest.raises(TypeError, match="unexpected keyword argument"):

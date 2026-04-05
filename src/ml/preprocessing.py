@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
-from src.utils.dataset import load_churn_dataset, DEFAULT_DATASET_PATH
+from src.ml.dataset import load_churn_dataset, DEFAULT_DATASET_PATH
 
 
 # ── Column definitions ───────────────────────────────────────────────────────

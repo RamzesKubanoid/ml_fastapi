@@ -1,15 +1,14 @@
 """
-test_preprocessing.py — unit tests for src/utils/preprocessing.py
+test_preprocessing.py — unit tests for src/ml/preprocessing.py
 
 Tests cover: missing value handling, feature/target split, train/test split,
 preprocessing application, class distribution reporting.
 """
-# import numpy as np
 import pandas as pd
 import pytest
 
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from src.utils.preprocessing import (
+from src.ml.preprocessing import (
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
     TARGET,
@@ -22,7 +21,6 @@ from src.utils.preprocessing import (
     load_raw_splits,
     prepare_data,
 )
-# from tests.conftest import SYNTHETIC_ROWS
 
 
 # ── _handle_missing ──────────────────────────────────────────────────────────

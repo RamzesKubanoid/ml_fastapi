@@ -9,14 +9,16 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
-import src.model_store as model_store
-from src.utils import dataset as ds_mod
-import src.utils.model_manipulation as mm_mod
-import src.utils.history_recorder as hr_mod
-import src.main as main_mod
+import src.core.model_store as model_store
+from src.ml import dataset as ds_mod
+import src.core.model_manipulation as mm_mod
+import src.core.history_recorder as hr_mod
 from src.main import app
-from src.utils.preprocessing import load_raw_splits
-from src.utils.model_factory import build_churn_pipeline, \
+import src.api.api_model as api_model_mod
+import src.api.api_dataset as api_dataset_mod
+import src.api.health as api_health_mod
+from src.ml.preprocessing import load_raw_splits
+from src.ml.model_factory import build_churn_pipeline, \
     resolve_hyperparameters
 
 # ── Synthetic dataset ────────────────────────────────────────────────────────
@@ -95,23 +97,18 @@ def client(tmp_path: Path,
     monkeypatch.setattr(ds_mod, "DEFAULT_DATASET_PATH", synthetic_csv)
 
     # ── Model + metadata persistence ──────────────────────────────────────
-    # Monkeypatching module-level constants (DEFAULT_MODEL_PATH etc.) is NOT
-    # enough: Python binds default argument values at function *definition*
-    # time, so patching the attribute after import never affects already-bound
-    # defaults.  We must wrap every function with a new closure whose default
-    # argument captures the tmp_path value.
 
     _model_path = tmp_path / "churn_model.joblib"
     _metadata_path = tmp_path / "metadata.json"
     _history_path = tmp_path / "history.json"
 
     # Store originals so wrappers can delegate to them
-    mm_mod._real_save_model    = mm_mod.save_churn_model
-    mm_mod._real_load_model    = mm_mod.load_churn_model
+    mm_mod._real_save_model = mm_mod.save_churn_model
+    mm_mod._real_load_model = mm_mod.load_churn_model
     mm_mod._real_save_metadata = mm_mod.save_model_metadata
     mm_mod._real_load_metadata = mm_mod.load_model_metadata
-    hr_mod._real_append        = hr_mod.append_training_record
-    hr_mod._real_load          = hr_mod.load_history
+    hr_mod._real_append = hr_mod.append_training_record
+    hr_mod._real_load = hr_mod.load_history
 
     def _save_model(pipeline, path=_model_path):
         mm_mod._real_save_model(pipeline, path)
@@ -135,33 +132,34 @@ def client(tmp_path: Path,
         return hr_mod._real_load(
             path=path, model_type=model_type, last_n=last_n)
 
-    # Patch each function on every module that imported it.
-    # `from x import f` copies the reference at import time, so patching
-    # x.f afterwards has no effect on the copy — each import site needs its
-    # own monkeypatch.
-    #
-    # main.py imports:  save_churn_model, save_model_metadata
-    # model_store.py imports: load_churn_model, load_model_metadata
-    # (load_* are never imported into main.py, so patching main_mod for
-    #  those would raise AttributeError)
+    # save_* are imported into src.api.api_model
+    monkeypatch.setattr(mm_mod, "save_churn_model", _save_model)
+    monkeypatch.setattr(api_model_mod, "save_churn_model", _save_model)
 
-    monkeypatch.setattr(mm_mod,      "save_churn_model",    _save_model)
-    monkeypatch.setattr(main_mod,    "save_churn_model",    _save_model)
+    monkeypatch.setattr(mm_mod, "save_model_metadata", _save_metadata)
+    monkeypatch.setattr(api_model_mod, "save_model_metadata", _save_metadata)
 
-    monkeypatch.setattr(mm_mod,      "save_model_metadata", _save_metadata)
-    monkeypatch.setattr(main_mod,    "save_model_metadata", _save_metadata)
+    # load_* are imported into model_store only
+    monkeypatch.setattr(mm_mod, "load_churn_model", _load_model)
+    monkeypatch.setattr(model_store, "load_churn_model", _load_model)
 
-    monkeypatch.setattr(mm_mod,      "load_churn_model",    _load_model)
-    monkeypatch.setattr(model_store, "load_churn_model",    _load_model)
-
-    monkeypatch.setattr(mm_mod,      "load_model_metadata", _load_metadata)
+    monkeypatch.setattr(mm_mod, "load_model_metadata", _load_metadata)
     monkeypatch.setattr(model_store, "load_model_metadata", _load_metadata)
 
-    monkeypatch.setattr(hr_mod,      "append_training_record", _append)
-    monkeypatch.setattr(main_mod,    "append_training_record", _append)
+    # history functions are imported into src.api.api_model
+    monkeypatch.setattr(hr_mod, "append_training_record", _append)
+    monkeypatch.setattr(api_model_mod, "append_training_record", _append)
 
-    monkeypatch.setattr(hr_mod,      "load_history",           _load_history)
-    monkeypatch.setattr(main_mod,    "load_history",           _load_history)
+    monkeypatch.setattr(hr_mod, "load_history", _load_history)
+    monkeypatch.setattr(api_model_mod, "load_history", _load_history)
+
+    # load_churn_dataset is imported into dataset and health routers
+    monkeypatch.setattr(api_dataset_mod,
+                        "load_churn_dataset",
+                        lambda: ds_mod.load_churn_dataset(synthetic_csv))
+    monkeypatch.setattr(api_health_mod,
+                        "load_churn_dataset",
+                        lambda: ds_mod.load_churn_dataset(synthetic_csv))
 
     with TestClient(app, raise_server_exceptions=False) as c:
         yield c

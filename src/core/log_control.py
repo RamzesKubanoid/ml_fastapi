@@ -6,16 +6,9 @@ module its own named logger while sharing the same format, level, and
 handlers configured here.
 
 Log format is structured text that is both human-readable locally and
-easily parsed by log aggregators (Datadog, CloudWatch, Loki, etc.) in
-production. Each line contains:
+easily parsed by log aggregators in production. Each line contains:
 
     LEVEL     | ISO-8601 timestamp | logger name | message
-
-Usage in any module:
-    from src.utils.log_control import get_logger
-    log = get_logger(__name__)
-    log.info("Something happened")
-    log.error("Something went wrong: %s", exc)
 """
 import logging
 import sys
