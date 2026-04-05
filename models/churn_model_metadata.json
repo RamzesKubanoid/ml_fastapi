@@ -1,9 +1,9 @@
 {
-  "trained_at": "2026-04-03T18:18:47.592448+00:00",
+  "trained_at": "2026-04-05T11:39:47.716955+00:00",
   "model_type": "logreg",
   "hyperparameters": {
-    "C": 1,
-    "max_iter": 200,
+    "C": 1.0,
+    "max_iter": 1000,
     "random_state": 42,
     "class_weight": "balanced"
   },

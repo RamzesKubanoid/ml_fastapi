@@ -19,33 +19,39 @@ The service ingests a customer dataset, trains a classification model (Logistic 
 ```
 churn-service/
 ├── data/
-│   └── churn_dataset.csv          # Training data
-├── models/                        # Persisted artifacts (git-ignored)
-│   ├── churn_model.joblib         # Trained sklearn Pipeline
-│   ├── churn_model_metadata.json  # Last training run metadata
-│   └── training_history.json      # Append-only training history
+│   └── churn_dataset.csv              # Training data
+├── models/                            # Persisted artifacts (git-ignored)
+│   ├── churn_model.joblib             # Trained sklearn Pipeline
+│   ├── churn_model_metadata.json      # Last training run metadata
+│   └── training_history.json          # Append-only training history
 ├── src/
-│   ├── utils/
-│   │   ├── dataset.py             # CSV loading and validation
-│   │   ├── preprocessing.py       # Feature engineering and splitting
-│   │   ├── logreg.py              # ChurnPreprocessor (custom sklearn transformer)
-│   │   ├── transformer_universal.py # ColumnTransformer-based pipeline builder
-│   │   ├── model_factory.py       # Model selection and hyperparameter defaults
-│   │   ├── model_manipulation.py  # joblib save / load for model and metadata
-│   │   ├── history_recorder.py    # Append-only JSON training history
-│   │   └── log_control.py         # Centralised logging configuration
-│   ├── schemas.py                 # Pydantic request / response models
-│   ├── error_handlers.py          # Global exception handlers and error format
-│   ├── model_store.py             # In-memory model state (loaded once on import)
-│   └── main.py                    # FastAPI app and all endpoints
+│   ├── api/                           # HTTP layer — one file per endpoint group
+│   │   ├── api_dataset.py             # GET /dataset/preview, /info, /split-info
+│   │   ├── api_model.py               # POST /train, GET /status, /schema, /metrics
+│   │   ├── health.py                  # GET /health
+│   │   └── predict.py                 # POST /predict
+│   ├── core/                          # Infrastructure — persistence, state, logging
+│   │   ├── history_recorder.py        # Append-only JSON training history
+│   │   ├── log_control.py             # Centralised logging configuration
+│   │   ├── model_manipulation.py      # joblib save / load for model and metadata
+│   │   └── model_store.py             # In-memory model state (loaded once on import)
+│   ├── ml/                            # ML pipeline — data, features, models
+│   │   ├── dataset.py                 # CSV loading and Pydantic validation
+│   │   ├── logreg.py                  # ChurnPreprocessor (custom sklearn transformer)
+│   │   ├── model_factory.py           # Model selection and hyperparameter defaults
+│   │   ├── preprocessing.py           # Feature engineering and train/test splitting
+│   │   └── transformer_universal.py   # ColumnTransformer-based pipeline builder
+│   ├── error_handlers.py              # Global exception handlers and error format
+│   ├── schemas.py                     # Pydantic request / response models
+│   └── main.py                        # FastAPI app — router registration only
 ├── tests/
-│   ├── conftest.py                # Shared fixtures and test isolation
+│   ├── conftest.py                    # Shared fixtures and test isolation
 │   ├── test_dataset.py
 │   ├── test_preprocessing.py
 │   ├── test_logreg.py
 │   ├── test_model_manipulation.py
 │   ├── test_history_recorder.py
-│   └── test_api.py                # Integration tests with TestClient
+│   └── test_api.py                    # Integration tests with TestClient
 ├── Dockerfile
 ├── .dockerignore
 ├── pytest.ini
@@ -216,7 +222,7 @@ curl -X POST http://localhost:8000/predict \
       "support_requests": 8,
       "account_age_months": 6,
       "failed_payments": 3,
-      "region": "south",
+      "region": "africa",
       "device_type": "mobile",
       "payment_method": "card",
       "autopay_enabled": 0
@@ -231,7 +237,7 @@ curl -X POST http://localhost:8000/predict \
   -d '{
     "clients": [
       {"monthly_fee": 95.0, "usage_hours": 3.0, "support_requests": 8,
-       "account_age_months": 6, "failed_payments": 3, "region": "south",
+       "account_age_months": 6, "failed_payments": 3, "region": "africa",
        "device_type": "mobile", "payment_method": "card", "autopay_enabled": 0},
       {"monthly_fee": 30.0, "usage_hours": 40.0, "support_requests": 0,
        "account_age_months": 48, "failed_payments": 0, "region": "north",
@@ -289,3 +295,12 @@ All errors return the same JSON envelope regardless of origin:
 ```
 
 Common codes: `validation_error`, `model_not_ready`, `not_found`, `data_error`, `internal_server_error`.
+
+src/
+├── api/
+│   ├── __init__.py     # empty
+│   ├── health.py       # GET /health
+│   ├── dataset.py      # GET /dataset/preview, /dataset/info, /dataset/split-info
+│   ├── model.py        # POST /model/train, GET /model/status, /model/schema, /model/metrics
+│   └── predict.py      # POST /predict
+├── main.py             # app creation + router registration only

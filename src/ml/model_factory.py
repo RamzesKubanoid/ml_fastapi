@@ -6,7 +6,7 @@ approach) and owns the per-model default hyperparameter registry.
 """
 from typing import Any
 
-from src.utils.transformer_universal import build_universal_pipeline
+from src.ml.transformer_universal import build_universal_pipeline
 
 
 # ── Per-model default hyperparameters ────────────────────────────────────────

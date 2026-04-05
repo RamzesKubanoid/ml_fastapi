@@ -13,7 +13,7 @@ here for testing, experimentation, and as a reference implementation.
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from src.utils.preprocessing import (
+from src.ml.preprocessing import (
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
     _build_preprocessor,

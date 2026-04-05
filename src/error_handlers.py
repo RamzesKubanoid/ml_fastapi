@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from src.utils.log_control import get_logger
+from src.core.log_control import get_logger
 
 log = get_logger(__name__)
 

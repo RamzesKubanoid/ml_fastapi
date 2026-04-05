@@ -1,21 +1,17 @@
 """
 model_store.py — single source of truth for the in-memory model state.
 
-Python's module system executes this file exactly once per process, no matter
-how many times it is imported. That makes module-level variables a safe and
-idiomatic alternative to app.state when a lifespan handler is not used.
-
 On first import the module attempts to load a previously saved model and its
 metadata from disk. If no file exists yet it starts with empty state, which
 the /model/status endpoint surfaces as "not trained".
 """
 from sklearn.pipeline import Pipeline
 
-from src.utils.model_manipulation import (
+from src.core.model_manipulation import (
     load_churn_model,
     load_model_metadata,
 )
-from src.utils.log_control import get_logger
+from src.core.log_control import get_logger
 
 log = get_logger(__name__)
 

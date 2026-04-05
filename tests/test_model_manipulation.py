@@ -1,5 +1,5 @@
 """
-test_model_manipulation.py — unit tests for src/utils/model_manipulation.py
+test_model_manipulation.py — unit tests for src/core/model_manipulation.py
 
 Tests cover: save/load round-trip, missing file errors, metadata persistence.
 """
@@ -7,7 +7,7 @@ import json
 import numpy as np
 import pytest
 
-from src.utils.model_manipulation import (
+from src.core.model_manipulation import (
     load_churn_model,
     load_model_metadata,
     save_churn_model,
