@@ -18,6 +18,13 @@ app = FastAPI(
 
 register_error_handlers(app)
 
+
+@app.get("/", tags=["Root"])
+def root():
+    """Service root — confirms the API is reachable."""
+    return {"message": "ml churn service is running"}
+
+
 app.include_router(health_router)
 app.include_router(dataset_router, prefix="/dataset", tags=["Dataset"])
 app.include_router(model_router,   prefix="/model",   tags=["Model"])

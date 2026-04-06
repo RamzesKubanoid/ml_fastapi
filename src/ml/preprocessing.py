@@ -3,28 +3,10 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
-from src.ml.dataset import validate_df_rows, load_churn_dataset, \
+from src.ml.dataset import load_churn_dataset, \
     DEFAULT_DATASET_PATH
-
-
-# ── Column definitions ───────────────────────────────────────────────────────
-
-NUMERIC_FEATURES: list[str] = [
-    "monthly_fee",
-    "usage_hours",
-    "support_requests",
-    "account_age_months",
-    "failed_payments",
-]
-
-CATEGORICAL_FEATURES: list[str] = [
-    "region",
-    "device_type",
-    "payment_method",
-    "autopay_enabled",
-]
-
-TARGET: str = "churn"
+from src.ml.row_handler import validate_df_rows, _handle_missing, \
+    NUMERIC_FEATURES, CATEGORICAL_FEATURES, TARGET
 
 
 # ── Data preparation ─────────────────────────────────────────────────────────
@@ -75,66 +57,6 @@ def load_raw_splits(
 
 
 # ── Steps ────────────────────────────────────────────────────────────────────
-
-def _handle_missing(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Drops rows where the target is missing, then handles missing values in
-    features:
-      - Numeric columns  → filled with the column median.
-      - Categorical cols → filled with the column mode (most frequent value).
-
-    Args:
-        df: Raw DataFrame straight from load_churn_dataset.
-
-    Returns:
-        Cleaned DataFrame with no missing values.
-
-    Raises:
-        ValueError: If any expected column is absent from the DataFrame.
-    """
-    expected = NUMERIC_FEATURES + CATEGORICAL_FEATURES + [TARGET]
-    missing_cols = [c for c in expected if c not in df.columns]
-    if missing_cols:
-        raise ValueError(
-            f"Dataset is missing required column(s): {missing_cols}. "
-            f"Expected: {expected}. "
-            f"Found: {list(df.columns)}."
-        )
-
-    rows_before = len(df)
-
-    # Target missing → cannot impute, must drop
-    df = df.dropna(subset=[TARGET])
-
-    if df.empty:
-        raise ValueError(
-            "Dataset is empty after dropping rows with missing target.")
-
-    dropped = rows_before - len(df)
-    if dropped:
-        print(f"[missing] Dropped {dropped} row(s) with missing target.")
-
-    # Numeric features: impute with median
-    missing_numeric = [c for c in NUMERIC_FEATURES if df[c].isna().any()]
-    if missing_numeric:
-        df[missing_numeric] = df[missing_numeric].fillna(
-            df[missing_numeric].median())
-        print(
-            f"[missing] Imputed median for numeric columns: {missing_numeric}")
-
-    # Categorical features: impute with mode
-    missing_categorical = [
-        c for c in CATEGORICAL_FEATURES if df[c].isna().any()
-        ]
-    for col in missing_categorical:
-        df[col] = df[col].fillna(df[col].mode()[0])
-    if missing_categorical:
-        print(
-            f"[missing] Imputed mode for categoric cols: {missing_categorical}"
-            )
-
-    return df
-
 
 def _split_features_target(
     df: pd.DataFrame,

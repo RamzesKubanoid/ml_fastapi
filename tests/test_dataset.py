@@ -6,6 +6,7 @@ Tests cover: happy path loading, empty file, missing file, schema validation.
 import pytest
 import pandas as pd
 from src.ml.dataset import load_churn_dataset, dataset_info
+from src.ml.row_handler import validate_df_rows
 from tests.conftest import SYNTHETIC_ROWS
 
 
@@ -64,8 +65,9 @@ class TestLoadChurnDataset:
         """A CSV missing a required column should fail Pydantic validation."""
         bad = tmp_path / "bad.csv"
         bad.write_text("monthly_fee,churn\n10.0,0\n")
+        raw_df = load_churn_dataset(bad)
         with pytest.raises(Exception):
-            load_churn_dataset(bad)
+            validate_df_rows(raw_df)
 
 
 # ── dataset_info ─────────────────────────────────────────────────────────────

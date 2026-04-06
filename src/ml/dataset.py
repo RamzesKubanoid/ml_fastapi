@@ -1,8 +1,8 @@
 """Functions to work with churn dataset"""
 from pathlib import Path
 import pandas as pd
-from src.schemas import DataSetRowChurn
 from src.core.log_control import get_logger
+from src.ml.row_handler import validate_df_rows, _handle_missing
 
 log = get_logger(__name__)
 
@@ -39,28 +39,6 @@ def load_churn_dataset(csv_path: Path = DEFAULT_DATASET_PATH) -> pd.DataFrame:
     return raw_df
 
 
-def validate_df_rows(raw_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Reads churn dataframe rows, validates and transforms each row
-    into a DataSetRowChurn object, and returns
-    all records as a pandas DataFrame.
-    Args:
-        raw_df: pandas Dataframe containing churn data
-    Returns:
-        A pandas DataFrame where each row corresponds to a validated
-        DataSetRowChurn instance.
-    """
-    validated_rows: list[DataSetRowChurn] = [
-        DataSetRowChurn(**row)
-        for row in raw_df.to_dict(orient="records")
-    ]
-
-    log.info("Dataset validated: %d rows", len(validated_rows))
-    return pd.DataFrame(
-        [row.model_dump() for row in validated_rows]
-    )
-
-
 def dataset_info(csv_path: str = str(DEFAULT_DATASET_PATH)) -> dict:
     """
     Loads the churn dataset and returns summary information about it.
@@ -78,6 +56,8 @@ def dataset_info(csv_path: str = str(DEFAULT_DATASET_PATH)) -> dict:
                                     its absolute count and relative share
     """
     df = load_churn_dataset(Path(csv_path))
+    df = _handle_missing(df)
+    df = validate_df_rows(df)
 
     if "churn" not in df.columns:
         raise ValueError("Column churn not found in dataet")

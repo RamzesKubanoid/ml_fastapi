@@ -6,11 +6,8 @@ from sklearn.metrics import accuracy_score, f1_score
 
 from src.schemas import TrainingConfigChurn, FeatureVectorChurn
 from src.error_handlers import ErrorResponseChurn
-from src.ml.preprocessing import (
-    load_raw_splits,
-    NUMERIC_FEATURES,
-    CATEGORICAL_FEATURES,
-)
+from src.ml.row_handler import NUMERIC_FEATURES, CATEGORICAL_FEATURES
+from src.ml.preprocessing import load_raw_splits
 from src.ml.model_factory import build_churn_pipeline, \
     resolve_hyperparameters
 from src.core.model_manipulation import save_churn_model, save_model_metadata

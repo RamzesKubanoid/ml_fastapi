@@ -59,19 +59,19 @@ class TestModelPersistence:
 class TestMetadataPersistence:
     def test_save_creates_json_file(self, tmp_path):
         path = tmp_path / "meta.json"
-        save_model_metadata(0.80, 0.55, "logreg", {"C": 1.0}, path)
+        save_model_metadata(0.80, 0.55, 0.88, "logreg", {"C": 1.0}, path)
         assert path.exists()
 
     def test_saved_metadata_is_valid_json(self, tmp_path):
         path = tmp_path / "meta.json"
-        save_model_metadata(0.80, 0.55, "logreg", {"C": 1.0}, path)
+        save_model_metadata(0.80, 0.55, 0.88, "logreg", {"C": 1.0}, path)
         with open(path) as f:
             data = json.load(f)
         assert isinstance(data, dict)
 
     def test_metadata_contains_required_keys(self, tmp_path):
         path = tmp_path / "meta.json"
-        save_model_metadata(0.80, 0.55, "logreg", {"C": 1.0}, path)
+        save_model_metadata(0.80, 0.55, 0.88, "logreg", {"C": 1.0}, path)
         with open(path) as f:
             data = json.load(f)
         assert {"trained_at",
@@ -81,7 +81,7 @@ class TestMetadataPersistence:
 
     def test_metrics_values_correct(self, tmp_path):
         path = tmp_path / "meta.json"
-        save_model_metadata(0.80, 0.55, "logreg", {"C": 1.0}, path)
+        save_model_metadata(0.80, 0.55, 0.88, "logreg", {"C": 1.0}, path)
         meta = load_model_metadata(path)
         assert meta["metrics"]["accuracy"] == 0.80
         assert meta["metrics"]["f1_score"] == 0.55
@@ -89,7 +89,7 @@ class TestMetadataPersistence:
     def test_model_type_stored(self, tmp_path):
         path = tmp_path / "meta.json"
         save_model_metadata(
-            0.80, 0.55, "random_forest", {"n_estimators": 100}, path)
+            0.80, 0.55, 0.88, "random_forest", {"n_estimators": 100}, path)
         meta = load_model_metadata(path)
         assert meta["model_type"] == "random_forest"
 
@@ -99,6 +99,7 @@ class TestMetadataPersistence:
 
     def test_save_returns_metadata_dict(self, tmp_path):
         path = tmp_path / "meta.json"
-        result = save_model_metadata(0.75, 0.50, "logreg", {}, path)
+        result = save_model_metadata(0.75, 0.50, 0.88, "logreg", {}, path)
         assert isinstance(result, dict)
         assert result["metrics"]["accuracy"] == 0.75
+        assert result["metrics"]["roc_auc"] == 0.88

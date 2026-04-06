@@ -8,13 +8,15 @@ import pandas as pd
 import pytest
 
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from src.ml.preprocessing import (
+from src.ml.row_handler import (
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
     TARGET,
+    _handle_missing
+)
+from src.ml.preprocessing import (
     _apply_preprocessing,
     _build_preprocessor,
-    _handle_missing,
     _split_features_target,
     _split_train_test,
     get_split_info,

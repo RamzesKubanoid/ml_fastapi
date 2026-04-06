@@ -28,6 +28,9 @@ try:
     log.info("Pre-trained model loaded from disk.")
 except FileNotFoundError:
     log.warning("No saved model found — service starts untrained.")
+except Exception as exc:
+    log.warning(
+        "Could not load saved model: %s — service starts untrained.", exc)
 
 
 # ── Mutators ─────────────────────────────────────────────────────────────────

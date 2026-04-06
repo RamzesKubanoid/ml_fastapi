@@ -118,5 +118,8 @@ def load_model_metadata(
     if not path.exists():
         return None
 
-    with open(path) as f:
-        return json.load(f)
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return None

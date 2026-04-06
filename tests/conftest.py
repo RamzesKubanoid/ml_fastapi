@@ -116,10 +116,10 @@ def client(tmp_path: Path,
     def _load_model(path=_model_path):
         return mm_mod._real_load_model(path)
 
-    def _save_metadata(accuracy, f1, model_type, hyperparameters,
+    def _save_metadata(accuracy, f1, roc_auc, model_type, hyperparameters,
                        path=_metadata_path):
         return mm_mod._real_save_metadata(
-            accuracy, f1, model_type, hyperparameters, path
+            accuracy, f1, roc_auc, model_type, hyperparameters, path
         )
 
     def _load_metadata(path=_metadata_path):
