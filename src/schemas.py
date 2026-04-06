@@ -2,6 +2,11 @@
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+from typing_extensions import Annotated
+
+
+# Binary int restricted to exactly 0 or 1
+BinaryInt = Annotated[int, Field(ge=0, le=1)]
 
 
 class FeatureVectorChurn(BaseModel):
@@ -16,9 +21,10 @@ class FeatureVectorChurn(BaseModel):
     region: str
     device_type: str
     payment_method: str
-    autopay_enabled: int
+    autopay_enabled: BinaryInt
 
     model_config = {
+        "extra": "forbid",
         "json_schema_extra": {
             "examples": [
                 {
@@ -39,9 +45,9 @@ class FeatureVectorChurn(BaseModel):
 
 class DataSetRowChurn(FeatureVectorChurn):
     """
-    Base churn dataset model with prediction
+    Base churn dataset model with target label
     """
-    churn: int
+    churn: BinaryInt
 
 
 # ── Prediction request ───────────────────────────────────────────────────────

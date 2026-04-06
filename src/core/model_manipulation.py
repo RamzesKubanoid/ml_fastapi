@@ -65,6 +65,7 @@ def load_churn_model(
 def save_model_metadata(
     accuracy: float,
     f1: float,
+    roc_auc: float,
     model_type: str,
     hyperparameters: dict[str, Any],
     path: Path = DEFAULT_METADATA_PATH,
@@ -76,6 +77,7 @@ def save_model_metadata(
     Args:
         accuracy:        Accuracy on the test set.
         f1:              F1 score on the test set.
+        roc_auc:         ROC-AUC score on the test set.
         model_type:      String identifier of the trained model.
         hyperparameters: Full hyperparameter dict used during training
                          (defaults already merged in).
@@ -91,6 +93,7 @@ def save_model_metadata(
         "metrics": {
             "accuracy": accuracy,
             "f1_score": f1,
+            "roc_auc":  roc_auc,
         },
     }
     path.parent.mkdir(parents=True, exist_ok=True)

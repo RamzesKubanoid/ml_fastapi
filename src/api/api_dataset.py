@@ -1,4 +1,5 @@
 """Dataset related endpoints"""
+import json
 from fastapi import APIRouter, HTTPException, Query
 
 from src.ml.dataset import load_churn_dataset, dataset_info
@@ -23,7 +24,9 @@ def preview_dataset(
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 
-    return df.head(n).to_dict(orient="records")
+    # NaN replaced with None so missing float values serialise to JSON null
+    # rather than raising "Out of range float values are not JSON compliant".
+    return json.loads(df.head(n).to_json(orient="records"))
 
 
 @router.get("/info")
@@ -31,7 +34,10 @@ def get_dataset_info():
     """
     Returns info about dataset
     """
-    return dataset_info()
+    try:
+        return dataset_info()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.get("/split-info")

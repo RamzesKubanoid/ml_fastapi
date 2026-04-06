@@ -3,7 +3,8 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
-from src.ml.dataset import load_churn_dataset, DEFAULT_DATASET_PATH
+from src.ml.dataset import validate_df_rows, load_churn_dataset, \
+    DEFAULT_DATASET_PATH
 
 
 # ── Column definitions ───────────────────────────────────────────────────────
@@ -68,6 +69,7 @@ def load_raw_splits(
     """
     df = load_churn_dataset(csv_path)
     df = _handle_missing(df)
+    df = validate_df_rows(df)
     X, y = _split_features_target(df)
     return _split_train_test(X, y)
 
@@ -86,7 +88,19 @@ def _handle_missing(df: pd.DataFrame) -> pd.DataFrame:
 
     Returns:
         Cleaned DataFrame with no missing values.
+
+    Raises:
+        ValueError: If any expected column is absent from the DataFrame.
     """
+    expected = NUMERIC_FEATURES + CATEGORICAL_FEATURES + [TARGET]
+    missing_cols = [c for c in expected if c not in df.columns]
+    if missing_cols:
+        raise ValueError(
+            f"Dataset is missing required column(s): {missing_cols}. "
+            f"Expected: {expected}. "
+            f"Found: {list(df.columns)}."
+        )
+
     rows_before = len(df)
 
     # Target missing → cannot impute, must drop
