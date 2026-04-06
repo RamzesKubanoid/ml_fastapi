@@ -106,6 +106,17 @@ async def _handle_value_error(
     return _json(422, "data_error", str(exc))
 
 
+async def _handle_file_not_found(
+    _request: Request, exc: FileNotFoundError
+) -> JSONResponse:
+    """
+    Catches FileNotFoundError raised when a required file (dataset, model)
+    does not exist on disk. Returns 404 with the unified error envelope
+    instead of leaking a raw 500 traceback.
+    """
+    return _json(404, "not_found", str(exc))
+
+
 async def _handle_unhandled_exception(
     request: Request, exc: Exception
 ) -> JSONResponse:
@@ -133,10 +144,12 @@ def register_error_handlers(app: FastAPI) -> None:
     Handler priority (FastAPI resolves from most to least specific):
         RequestValidationError → _handle_validation_error (422)
         HTTPException → _handle_http_exception (4xx)
+        FileNotFoundError → _handle_file_not_found (404)
         ValueError → _handle_value_error (422)
         Exception → _handle_unhandled_exception (500)
     """
     app.add_exception_handler(RequestValidationError, _handle_validation_error)
     app.add_exception_handler(HTTPException, _handle_http_exception)
+    app.add_exception_handler(FileNotFoundError, _handle_file_not_found)
     app.add_exception_handler(ValueError, _handle_value_error)
     app.add_exception_handler(Exception, _handle_unhandled_exception)

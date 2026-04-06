@@ -148,17 +148,18 @@ def train_model(
     y_pred = pipeline.predict(X_test)
     accuracy = round(accuracy_score(y_test, y_pred), 4)
     f1 = round(f1_score(y_test, y_pred), 4)
+    roc_auc = compute_roc_auc(pipeline, X_test, y_test)
 
     save_churn_model(pipeline)
     metadata = save_model_metadata(
         accuracy=accuracy,
         f1=f1,
+        roc_auc=roc_auc,
         model_type=config.model_type,
         hyperparameters=resolved_params,
     )
     model_store.update(pipeline, metadata)
 
-    roc_auc = compute_roc_auc(pipeline, X_test, y_test)
     record = build_training_record(
         model_type=config.model_type,
         hyperparameters=resolved_params,

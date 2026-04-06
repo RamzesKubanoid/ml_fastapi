@@ -13,20 +13,18 @@ DEFAULT_DATASET_PATH = Path(
 
 def load_churn_dataset(csv_path: Path = DEFAULT_DATASET_PATH) -> pd.DataFrame:
     """
-    Reads a CSV file, validates and transforms each row into a DataSetRowChurn
-    object, and returns all records as a pandas DataFrame.
+    Reads a CSV file and returns all records as a pandas DataFrame.
 
     Args:
         csv_path: Path to the CSV file. Defaults to data/churn_dataset.csv
                   relative to the project root.
 
     Returns:
-        A pandas DataFrame where each row corresponds to a validated
-        DataSetRowChurn instance.
+        A pandas DataFrame with original data from csv.
 
     Raises:
         FileNotFoundError: If the CSV file does not exist at the given path.
-        ValidationError: If a row doesnt conform to the DataSetRowChurn schema.
+        ValueError: If a dataset is empty.
     """
     if not csv_path.exists():
         raise FileNotFoundError(f"Dataset file not found: {csv_path}")
@@ -38,11 +36,26 @@ def load_churn_dataset(csv_path: Path = DEFAULT_DATASET_PATH) -> pd.DataFrame:
 
     log.info("Dataset loaded: %d rows from %s", len(raw_df), csv_path)
 
+    return raw_df
+
+
+def validate_df_rows(raw_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Reads churn dataframe rows, validates and transforms each row
+    into a DataSetRowChurn object, and returns
+    all records as a pandas DataFrame.
+    Args:
+        raw_df: pandas Dataframe containing churn data
+    Returns:
+        A pandas DataFrame where each row corresponds to a validated
+        DataSetRowChurn instance.
+    """
     validated_rows: list[DataSetRowChurn] = [
         DataSetRowChurn(**row)
         for row in raw_df.to_dict(orient="records")
     ]
 
+    log.info("Dataset validated: %d rows", len(validated_rows))
     return pd.DataFrame(
         [row.model_dump() for row in validated_rows]
     )
@@ -66,6 +79,8 @@ def dataset_info(csv_path: str = str(DEFAULT_DATASET_PATH)) -> dict:
     """
     df = load_churn_dataset(Path(csv_path))
 
+    if "churn" not in df.columns:
+        raise ValueError("Column churn not found in dataet")
     churn_counts = df["churn"].value_counts().to_dict()
     total = len(df)
 
