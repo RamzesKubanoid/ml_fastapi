@@ -11,7 +11,7 @@ import pytest
 from src.ml.logreg import ChurnPreprocessor
 from src.ml.model_factory import build_churn_pipeline, \
     resolve_hyperparameters
-from src.ml.preprocessing import NUMERIC_FEATURES
+from src.ml.row_handler import NUMERIC_FEATURES
 
 
 # ── ChurnPreprocessor ────────────────────────────────────────────────────────

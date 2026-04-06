@@ -13,11 +13,8 @@ here for testing, experimentation, and as a reference implementation.
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from src.ml.preprocessing import (
-    CATEGORICAL_FEATURES,
-    NUMERIC_FEATURES,
-    _build_preprocessor,
-)
+from src.ml.row_handler import CATEGORICAL_FEATURES, NUMERIC_FEATURES
+from src.ml.preprocessing import _build_preprocessor
 
 
 class ChurnPreprocessor(BaseEstimator, TransformerMixin):
