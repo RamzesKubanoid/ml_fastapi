@@ -2,6 +2,7 @@
 from fastapi import APIRouter
 
 from src.ml.dataset import load_churn_dataset
+from src.ml.row_handler import _handle_missing, validate_df_rows
 from src.core.log_control import get_logger
 from src.core import model_store
 
@@ -19,11 +20,16 @@ def health_check():
     dataset_ready = False
     dataset_detail = None
     try:
-        load_churn_dataset()
+        df = load_churn_dataset()
+        df = _handle_missing(df)
+        validate_df_rows(df)
         dataset_ready = True
     except (FileNotFoundError, ValueError) as exc:
         dataset_detail = str(exc)
         log.warning("Health: dataset not accessible: %s", exc)
+    except Exception as exc:
+        dataset_detail = f"{type(exc).__name__}: {exc}"
+        log.warning("Health: dataset validation failed: %s", exc)
 
     model_ready = model_store.model is not None
     model_type = None
