@@ -199,12 +199,11 @@ _VALID_CLIENT = {
 
 class TestPredictUntrained:
     def test_returns_409_when_no_model(self, client):
-        r = client.post("/predict", json={"clients": [_VALID_CLIENT]})
+        r = client.post("/predict", json=_VALID_CLIENT)
         assert r.status_code == 409
 
     def test_error_body_has_model_not_ready_code(self, client):
-        body = client.post("/predict",
-                           json={"clients": [_VALID_CLIENT]}).json()
+        body = client.post("/predict", json=_VALID_CLIENT).json()
         assert body["code"] == "model_not_ready"
 
 
@@ -217,54 +216,50 @@ class TestPredictAfterTraining:
                     json={"model_type": "logreg", "hyperparameters": {}})
 
     def test_single_client_returns_one_result(self, client):
-        body = client.post("/predict",
-                           json={"clients": [_VALID_CLIENT]}).json()
+        body = client.post("/predict", json=_VALID_CLIENT).json()
         assert len(body) == 1
 
     def test_batch_returns_correct_count(self, client):
         body = client.post("/predict",
-                           json={"clients": [_VALID_CLIENT,
-                                             _VALID_CLIENT,
-                                             _VALID_CLIENT]}).json()
+                           json=[_VALID_CLIENT,
+                                 _VALID_CLIENT,
+                                 _VALID_CLIENT]).json()
         assert len(body) == 3
 
     def test_response_has_required_fields(self, client):
-        result = client.post("/predict",
-                             json={"clients": [_VALID_CLIENT]}).json()[0]
+        result = client.post("/predict", json=_VALID_CLIENT).json()[0]
         assert {"churn_class",
                 "probability_churn",
                 "probability_no_churn"} <= set(result.keys())
 
     def test_churn_class_is_binary(self, client):
-        result = client.post("/predict",
-                             json={"clients": [_VALID_CLIENT]}).json()[0]
+        result = client.post("/predict", json=_VALID_CLIENT).json()[0]
         assert result["churn_class"] in {0, 1}
 
     def test_probabilities_sum_to_one(self, client):
-        result = client.post("/predict",
-                             json={"clients": [_VALID_CLIENT]}).json()[0]
+        result = client.post("/predict", json=_VALID_CLIENT).json()[0]
         total = result["probability_churn"] + result["probability_no_churn"]
         assert abs(total - 1.0) < 1e-4
 
     def test_missing_required_field_returns_422(self, client):
         bad_client = {
             k: v for k, v in _VALID_CLIENT.items() if k != "monthly_fee"}
-        r = client.post("/predict", json={"clients": [bad_client]})
+        r = client.post("/predict", json=bad_client)
         assert r.status_code == 422
 
     def test_wrong_type_returns_422(self, client):
         bad_client = {**_VALID_CLIENT, "support_requests": "not-an-int"}
-        r = client.post("/predict", json={"clients": [bad_client]})
+        r = client.post("/predict", json=bad_client)
         assert r.status_code == 422
 
     def test_empty_clients_list_returns_422(self, client):
-        r = client.post("/predict", json={"clients": []})
+        r = client.post("/predict", json=[])
         assert r.status_code == 422
 
     def test_error_body_format_on_validation_failure(self, client):
         bad_client = {
             k: v for k, v in _VALID_CLIENT.items() if k != "monthly_fee"}
-        body = client.post("/predict", json={"clients": [bad_client]}).json()
+        body = client.post("/predict", json=bad_client).json()
         assert {"code", "message", "details"} <= set(body.keys())
         assert body["code"] == "validation_error"
 
@@ -358,7 +353,7 @@ class TestEndToEndScenario:
         assert status["model_type"] == "logreg"
 
         # 3. Predict returns a result
-        predict_r = client.post("/predict", json={"clients": [_VALID_CLIENT]})
+        predict_r = client.post("/predict", json=_VALID_CLIENT)
         assert predict_r.status_code == 200
         result = predict_r.json()[0]
         assert result["churn_class"] in {0, 1}

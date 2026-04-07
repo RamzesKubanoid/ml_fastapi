@@ -94,6 +94,18 @@ async def _handle_validation_error(
     )
 
 
+async def _handle_type_error(
+    _request: Request, exc: TypeError
+) -> JSONResponse:
+    """
+    Catches TypeError raised inside service logic (e.g. an empty list passed
+    to model.predict, or mismatched argument types). Returns 422 because the
+    request shape was valid but the payload was semantically unusable.
+    """
+    log.warning("TypeError: %s", exc)
+    return _json(422, "type_error", str(exc))
+
+
 async def _handle_value_error(
     _request: Request, exc: ValueError
 ) -> JSONResponse:
@@ -145,11 +157,13 @@ def register_error_handlers(app: FastAPI) -> None:
         RequestValidationError → _handle_validation_error (422)
         HTTPException → _handle_http_exception (4xx)
         FileNotFoundError → _handle_file_not_found (404)
+        TypeError → _handle_type_error (422)
         ValueError → _handle_value_error (422)
         Exception → _handle_unhandled_exception (500)
     """
     app.add_exception_handler(RequestValidationError, _handle_validation_error)
     app.add_exception_handler(HTTPException, _handle_http_exception)
     app.add_exception_handler(FileNotFoundError, _handle_file_not_found)
+    app.add_exception_handler(TypeError, _handle_type_error)
     app.add_exception_handler(ValueError, _handle_value_error)
     app.add_exception_handler(Exception, _handle_unhandled_exception)
